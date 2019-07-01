@@ -14,6 +14,7 @@ docker-run: .docker-image.minimized.flag
 	$(DOCKER) run --rm $(DOCKER_RUN_OPTS) $(shell cat $<)
 
 .PRECIOUS: $(DOCKER_INCLUDE)
+.PHONY: $(DOCKER_INCLUDE)
 $(DOCKER_INCLUDE): .docker-image.flag
 	$(SCRIPTS_DIR)/strace-docker.sh -d "$(DOCKER_RUN_OPTS)" -f $(shell cat $<) \
 		| $(SCRIPTS_DIR)/accessed-files.sh > $@
@@ -25,7 +26,7 @@ $(DOCKER_INCLUDE): .docker-image.flag
 	$(SCRIPTS_DIR)/minimize.sh -f $(shell cat .docker-image.flag) \
 		-v $(DOCKER_INCLUDE) > $@
 
-clean:
+minimizer-clean:
 	rm -f .docker-image.flag
 
-.PHONY: minimize docker-run docker-image clean
+.PHONY: minimize docker-run docker-image minimizer-clean
