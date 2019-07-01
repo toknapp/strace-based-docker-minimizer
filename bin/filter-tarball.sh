@@ -41,6 +41,7 @@ extract() {
         fi
     elif [ "$TYPE" = "d" ]; then
         echo >&2 "including dir: $TARGET $(du -sh "$TMP/in/$TARGET" | cut -f1)"
+        mkdir -p "$TMP/out/$(dirname "$TARGET")"
         cp -r "$TMP/in/$TARGET" "$TMP/out/$TARGET"
     else
         echo >&2 "skipping unknown type: $TYPE"
