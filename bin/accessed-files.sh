@@ -7,4 +7,5 @@ grep -v "= -1" \
     | grep -v '^/dev' \
     | grep -v '^/sys' \
     | grep -v '^/proc' \
-    | grep -v '^/tmp'
+    | grep -v '^/tmp' \
+    | sed "s/^/f\t/"

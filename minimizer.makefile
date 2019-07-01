@@ -27,6 +27,6 @@ $(DOCKER_INCLUDE): .docker-image.flag
 		-v $(DOCKER_INCLUDE) > $@
 
 minimizer-clean:
-	rm -f .docker-image.flag
+	rm -f .docker-image.flag .docker-image.minimized.flag
 
 .PHONY: minimize docker-run docker-image minimizer-clean

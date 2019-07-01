@@ -22,24 +22,30 @@ mkdir -p "$TMP/in"
 tar --force-local -xf "$INPUT" -C "$TMP/in"
 
 extract() {
-    if [ -e "$TMP/in/$1" -a ! -d "$TMP/in/$1" ]; then
-        echo >&2 "including: $1 $(du -h "$TMP/in/$1" | cut -f1)"
-        mkdir -p "$TMP/out/$(dirname "$1")"
-        cp "$TMP/in/$1" "$TMP/out/$1"
-    elif [ -h "$TMP/in/$1" ]; then
-        TARGET=$(readlink "$TMP/in/$1" | sed 's,^/,,')
-        extract "$TARGET"
+    if [ "$TYPE" = "f" ]; then
+        if [ -e "$TMP/in/$TARGET" -a ! -d "$TMP/in/$TARGET" ]; then
+            echo >&2 "including file: $TARGET $(du -h "$TMP/in/$TARGET" | cut -f1)"
+            mkdir -p "$TMP/out/$(dirname "$TARGET")"
+            cp "$TMP/in/$TARGET" "$TMP/out/$TARGET"
+        elif [ -h "$TMP/in/$TARGET" ]; then
+            LINK=$TARGET
+            TARGET=$(readlink "$TMP/in/$TARGET" | sed 's,^/,,')
+            extract
 
-        echo >&2 "symlink: $1 -> $TARGET"
+            echo >&2 "symlink: $TARGET -> $LINK"
 
-        mkdir -p "$TMP/out/$(dirname "$1")"
-        ln -sr "$TMP/out/$TARGET" "$TMP/out/$1"
+            mkdir -p "$TMP/out/$(dirname "$LINK")"
+            ln -sr "$TMP/out/$TARGET" "$TMP/out/$LINK"
+        else
+            echo >&2 "skipping file: $TARGET"
+        fi
+    elif [ "$TYPE" = "d" ]; then
+        echo >&2 "including dir: $TARGET $(du -sh "$TMP/in/$TARGET" | cut -f1)"
+        cp -r "$TMP/in/$TARGET" "$TMP/out/$TARGET"
     else
-        echo >&2 "skipping: $1"
+        echo >&2 "skipping unknown type: $TYPE"
     fi
 }
 
-grep '^/' "$FILTER" \
-    | sed 's,^/,,' \
-    | while read f; do extract "$f"; done
+cat "$FILTER" | while IPS=\t read TYPE TARGET; do extract; done
 tar -cf "$OUTPUT" -C "$TMP/out" .
