@@ -5,13 +5,16 @@ set -o nounset -o pipefail -o errexit
 DOCKER=${DOCKER-docker}
 DOCKER_RUN_OPTS=${DOCKER_RUN_OPTS-}
 TRIGGER_CMD=${TRIGGER_CMD-}
-while getopts "fd:i:p:t:" OPT; do
+WITH_RUNNING_CONTAINER=1
+while getopts "fd:i:p:t:rR" OPT; do
     case $OPT in
         d) DOCKER_OPTS="$DOCKER_OPTS $OPTARG" ;;
         s) STRACE_OPTS="$STRACE_OPTS $OPTARG" ;;
         i) INSTALL_STRACE_CMD="$OPTARG" ;;
         p) PACKAGE_MANAGER="$OPTARG" ;;
         t) TRIGGER_CMD="$OPTARG" ;;
+        r) WITH_RUNNING_CONTAINER=1 ;;
+        R) WITH_RUNNING_CONTAINER= ;;
         \?) echo "Invalid option: -$OPTARG" >&2; exit 2 ;;
     esac
 done
@@ -77,18 +80,28 @@ if [ -z "$TRIGGER_CMD" ]; then
     EXIT=$?
     set -o errexit
 else
-    $DOCKER run --rm \
-        --cap-add=SYS_PTRACE --volume="$TMP/trace":/trace \
-        --cidfile="$TMP/container" --detach \
-        $DOCKER_RUN_OPTS \
-        $(<"$TMP/extended.image") $@ >/dev/null
+    go() {
+        set +o errexit
+        env DOCKER_IMAGE=$(<"$TMP/extended.image") \
+            DOCKER_CONTAINER=$(<"$TMP/extended.image") \
+            $TRIGGER_CMD >&2
+        EXIT=$?
+        set -o errexit
+    }
 
-    set +o errexit
-    $TRIGGER_CMD >&2
-    EXIT=$?
-    set -o errexit
+    if [ -n "$WITH_RUNNING_CONTAINER" ]; then
+        $DOCKER run --rm \
+            --cap-add=SYS_PTRACE --volume="$TMP/trace":/trace \
+            --cidfile="$TMP/container" --detach \
+            $DOCKER_RUN_OPTS \
+            $(<"$TMP/extended.image") $@ >/dev/null
 
-    $DOCKER inspect $(<"$TMP/container") >/dev/null && $DOCKER stop $(<"$TMP/container")
+        go
+
+        $DOCKER inspect $(<"$TMP/container") >/dev/null && $DOCKER stop $(<"$TMP/container")
+    else
+        go
+    fi
 fi
 
 grep -v "\--- SIG" < "$TMP/trace"
