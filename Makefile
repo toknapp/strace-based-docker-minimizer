@@ -1,4 +1,4 @@
-test:
+test clean:
 	$(MAKE) -C examples $@
 
-.PHONY: test
+.PHONY: test clean

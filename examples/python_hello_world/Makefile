@@ -5,4 +5,6 @@ test:
 	$(MAKE) minimize docker-image
 	$(MAKE) docker-run | grep 'hello world'
 
-.PHONY: test
+clean: minimizer-clean
+
+.PHONY: test clean

@@ -7,4 +7,6 @@ test:
 	$(MAKE) minimize docker-image
 	./verify.sh -i $(DOCKER_IMAGE)
 
-.PHONY: test verify
+clean: minimizer-clean
+
+.PHONY: test clean
