@@ -5,7 +5,8 @@ set -o nounset -o pipefail -o errexit
 DOCKER=${DOCKER-docker}
 DOCKER_RUN_OPTS=${DOCKER_RUN_OPTS-}
 TRIGGER_CMD=${TRIGGER_CMD-}
-WITH_RUNNING_CONTAINER=1
+WITH_RUNNING_CONTAINER=${WITH_RUNNING_CONTAINER-1}
+TRACE_FILE_IN_CONTAINER=${TRACE_FILE_IN_CONTAINER-/tmp/trace}
 while getopts "fd:i:p:t:rR" OPT; do
     case $OPT in
         d) DOCKER_OPTS="$DOCKER_OPTS $OPTARG" ;;
@@ -14,7 +15,7 @@ while getopts "fd:i:p:t:rR" OPT; do
         p) PACKAGE_MANAGER="$OPTARG" ;;
         t) TRIGGER_CMD="$OPTARG" ;;
         r) WITH_RUNNING_CONTAINER=1 ;;
-        R) WITH_RUNNING_CONTAINER= ;;
+        R) WITH_RUNNING_CONTAINER=0 ;;
         \?) echo "Invalid option: -$OPTARG" >&2; exit 2 ;;
     esac
 done
@@ -57,7 +58,7 @@ INTERPRETER=$($DOCKER run --rm \
 )
 
 # prepare to run strace
-STRACE='["strace", "-qq", "-D", "-o", "/trace", "-f", "-e", "file", "'$INTERPRETER'", "'$EXEC'"]'
+STRACE='["strace", "-qq", "-D", "-o", "'$TRACE_FILE_IN_CONTAINER'", "-f", "-e", "file", "'$INTERPRETER'", "'$EXEC'"]'
 
 ENTRYPOINT=$($DOCKER inspect "$INPUT" \
     | jq --compact-output "[$STRACE, .[0].Config.Entrypoint[1:]] | flatten"
@@ -69,40 +70,47 @@ EOF
 
 $DOCKER build --iidfile="$TMP/extended.image" "$TMP" >&2
 
-touch "$TMP/trace" && chmod 666 "$TMP/trace"
+TRACE_OUTPUT=$TMP/trace
+touch "$TRACE_OUTPUT" && chmod 666 "$TRACE_OUTPUT"
 
 if [ -z "$TRIGGER_CMD" ]; then
     set +o errexit
-    $DOCKER run --rm \
-        --cap-add=SYS_PTRACE --volume="$TMP/trace":/trace \
+    $DOCKER run --rm --cap-add=SYS_PTRACE \
+        --volume="$TRACE_OUTPUT":"$TRACE_FILE_IN_CONTAINER" \
         $DOCKER_RUN_OPTS \
         $(<"$TMP/extended.image") $@ >&2
     EXIT=$?
     set -o errexit
 else
-    go() {
+    run_trigger() {
         set +o errexit
-        env DOCKER_IMAGE=$(<"$TMP/extended.image") \
-            DOCKER_CONTAINER=$(<"$TMP/extended.image") \
-            $TRIGGER_CMD >&2
+        $TRIGGER_CMD >&2
         EXIT=$?
         set -o errexit
     }
 
-    if [ -n "$WITH_RUNNING_CONTAINER" ]; then
-        $DOCKER run --rm \
-            --cap-add=SYS_PTRACE --volume="$TMP/trace":/trace \
+    if [ "$WITH_RUNNING_CONTAINER" = "1" ]; then
+        $DOCKER run --rm --cap-add=SYS_PTRACE \
+            --volume="$TRACE_OUTPUT":"$TRACE_FILE_IN_CONTAINER" \
             --cidfile="$TMP/container" --detach \
             $DOCKER_RUN_OPTS \
             $(<"$TMP/extended.image") $@ >/dev/null
 
-        go
+        DOCKER_IMAGE=$(<"$TMP/extended.image") \
+            DOCKER_CONTAINER=$(<"$TMP/container") \
+            TRACE_FILE_IN_CONTAINER="$TRACE_FILE_IN_CONTAINER" \
+            TRACE_OUTPUT="$TRACE_OUTPUT" \
+            run_trigger
 
-        $DOCKER inspect $(<"$TMP/container") >/dev/null && $DOCKER stop $(<"$TMP/container")
+        $DOCKER inspect $(<"$TMP/container") >/dev/null && $DOCKER stop $(<"$TMP/container") >/dev/null
     else
-        go
+        DOCKER_IMAGE=$(<"$TMP/extended.image") \
+            TRACE_OUTPUT="$TRACE_OUTPUT" \
+            TRACE_FILE_IN_CONTAINER="$TRACE_FILE_IN_CONTAINER" \
+            run_trigger
     fi
 fi
 
-grep -v "\--- SIG" < "$TMP/trace"
+grep -v "\--- SIG" "$TRACE_OUTPUT"
+
 exit $EXIT

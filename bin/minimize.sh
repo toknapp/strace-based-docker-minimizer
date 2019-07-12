@@ -19,17 +19,16 @@ trap "rm -rf $TMP" EXIT
 
 ENTRYPOINT=$($DOCKER inspect "$FROM" | jq --compact-output ".[0].Config.Entrypoint")
 WORKDIR=$($DOCKER inspect "$FROM" | jq --raw-output ".[0].Config.WorkingDir")
-env_args() {
+
+changes() {
+    echo "WORKDIR ${WORKDIR:-/}"
+    echo "ENTRYPOINT $ENTRYPOINT"
     $DOCKER inspect "$FROM" \
         | jq --raw-output ".[0].Config.Env[]" \
-        | sed 's/\(.*\)/--change=ENV \1/' \
-        | tr '\n' '\0'
+        | sed 's/\(.*\)/ENV \1/'
 }
 
 "$SCRIPTS_DIR/export-image.sh" "$FROM" \
-    | "$SCRIPTS_DIR/filter-tarball.sh" -v "$FILTER" 2>/dev/null \
-    | xargs -0 --arg-file=<(env_args) \
-        $DOCKER import \
-        --change="WORKDIR ${WORKDIR:-/}" \
-        --change="ENTRYPOINT $ENTRYPOINT" \
-        -
+    | "$SCRIPTS_DIR/filter-tarball.sh" -v "$FILTER" \
+    | xargs -0 --arg-file=<(changes | sed 's/^/--change=/' | tr '\n' '\0') \
+        $DOCKER import -
