@@ -71,12 +71,11 @@ EOF
 $DOCKER build --iidfile="$TMP/extended.image" "$TMP" >&2
 
 TRACE_OUTPUT=$TMP/trace
-touch "$TRACE_OUTPUT" && chmod 666 "$TRACE_OUTPUT"
 
 if [ -z "$TRIGGER_CMD" ]; then
     set +o errexit
     $DOCKER run --rm --cap-add=SYS_PTRACE \
-        --volume="$TRACE_OUTPUT":"$TRACE_FILE_IN_CONTAINER" \
+        --volume="$(dirname "$TRACE_OUTPUT"):$(dirname "$TRACE_FILE_IN_CONTAINER")" \
         $DOCKER_RUN_OPTS \
         $(<"$TMP/extended.image") $@ >&2
     EXIT=$?
@@ -90,9 +89,9 @@ else
     }
 
     if [ "$WITH_RUNNING_CONTAINER" = "1" ]; then
-        $DOCKER run --rm --cap-add=SYS_PTRACE \
-            --volume="$TRACE_OUTPUT":"$TRACE_FILE_IN_CONTAINER" \
-            --cidfile="$TMP/container" --detach \
+        $DOCKER run --rm --cap-add=SYS_PTRACE --detach \
+            --volume="$(dirname "$TRACE_OUTPUT"):$(dirname "$TRACE_FILE_IN_CONTAINER")" \
+            --cidfile="$TMP/container" \
             $DOCKER_RUN_OPTS \
             $(<"$TMP/extended.image") $@ >/dev/null
 

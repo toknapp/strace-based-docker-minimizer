@@ -6,7 +6,7 @@ DOCKER_INCLUDE ?= .dockerinclude
 DOCKER_IMAGE ?= $(shell pwd | xargs basename)
 
 minimize: .docker-image.flag
-	$(SCRIPTS_DIR)/strace-docker.sh -f $(shell cat $<) \
+	$(SCRIPTS_DIR)/strace-docker.sh -f $(shell cat $<) $(DOCKER_RUN_ARGS) \
 		| $(SCRIPTS_DIR)/accessed-files.sh > $(DOCKER_INCLUDE)
 
 docker-image: .docker-image.minimized.flag
