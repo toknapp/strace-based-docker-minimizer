@@ -58,7 +58,7 @@ INTERPRETER=$($DOCKER run --rm \
 )
 
 # prepare to run strace
-STRACE='["strace", "-qq", "-D", "-o", "'$TRACE_FILE_IN_CONTAINER'", "-f", "-e", "file", "'$INTERPRETER'", "'$EXEC'"]'
+STRACE='["strace", "-qq", "-z", "-D", "-o", "'$TRACE_FILE_IN_CONTAINER'", "-ff", "-f", "-e", "%file", "'$INTERPRETER'", "'$EXEC'"]'
 
 ENTRYPOINT=$($DOCKER inspect "$INPUT" \
     | jq --compact-output "[$STRACE, .[0].Config.Entrypoint[1:]] | flatten"
@@ -110,6 +110,6 @@ else
     fi
 fi
 
-grep -v "\--- SIG" "$TRACE_OUTPUT"
+cat "$TRACE_OUTPUT".*
 
 exit $EXIT

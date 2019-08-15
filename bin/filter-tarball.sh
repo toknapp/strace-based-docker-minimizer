@@ -23,26 +23,32 @@ tar --force-local -xf "$INPUT" -C "$TMP/in"
 
 extract() {
     if [ "$TYPE" = "f" ]; then
-        if [ -e "$TMP/in/$TARGET" -a ! -d "$TMP/in/$TARGET" ]; then
+        if [ -f "$TMP/in/$TARGET" ]; then
             echo >&2 "including file: $TARGET $(du -h "$TMP/in/$TARGET" | cut -f1)"
             mkdir -p "$TMP/out/$(dirname "$TARGET")"
-            cp "$TMP/in/$TARGET" "$TMP/out/$TARGET"
+            cp -p "$TMP/in/$TARGET" "$TMP/out/$TARGET"
+        elif [ -d "$TMP/in/$TARGET" ]; then
+            echo >&2 "making directory: $TARGET"
+            mkdir -p "$TMP/out/$TARGET"
         elif [ -h "$TMP/in/$TARGET" ]; then
             LINK=$TARGET
-            TARGET=$(readlink "$TMP/in/$TARGET" | sed 's,^/,,')
-            extract
+            TARGET=$(readlink "$TMP/in/$TARGET")
+            echo >&2 "symlink: $LINK -> $TARGET"
 
-            echo >&2 "symlink: $TARGET -> $LINK"
-
+            mkdir -p "$TMP/out/$(dirname "$TARGET")"
             mkdir -p "$TMP/out/$(dirname "$LINK")"
-            ln -sr "$TMP/out/$TARGET" "$TMP/out/$LINK"
-        else
+            cp "$TMP/in/$TARGET" "$TMP/out/$TARGET" 1>&2
+            cp -d "$TMP/in/$LINK" "$TMP/out/$LINK" 1>&2
+        elif [ ! -e "$TMP/in/$TARGET" ]; then
             echo >&2 "skipping file: $TARGET"
+        else
+            echo >&2 "don't know what to do with: $TARGET"
+            exit 2
         fi
     elif [ "$TYPE" = "d" ]; then
         echo >&2 "including dir: $TARGET $(du -sh "$TMP/in/$TARGET" | cut -f1)"
         mkdir -p "$TMP/out/$(dirname "$TARGET")"
-        cp -r "$TMP/in/$TARGET" "$TMP/out/$TARGET"
+        cp -pr "$TMP/in/$TARGET" "$TMP/out/$(dirname "$TARGET")" 1>&2
     else
         echo >&2 "skipping unknown type: $TYPE"
     fi
