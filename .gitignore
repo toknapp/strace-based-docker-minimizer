@@ -1,2 +1,3 @@
 .*.flag
 .dockerinclude
+.docker-image

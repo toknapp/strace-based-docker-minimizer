@@ -1,5 +1,5 @@
-test: .docker-image
-	./verify.sh -i $(shell cat $<)
+test: minimize .docker-image
+	./verify.sh -i $(shell cat .docker-image)
 
 .docker-image: .dockerinclude
 	../../bin/minimize.sh
