@@ -1,12 +1,10 @@
-export PACKAGE_MANAGER := apt
-export DOCKER_RUN_OPTS := --publish 8000:5000
-export TRIGGER_CMD := ./verify.sh
-include ../../minimizer.makefile
+test: .docker-image
+	./verify.sh -i $(shell cat $<)
 
-test:
-	$(MAKE) minimize docker-image
-	./verify.sh -i $(DOCKER_IMAGE)
+.docker-image: .dockerinclude
+	../../bin/minimize.sh
 
-clean: minimizer-clean
+minimize: .
+	../../bin/strace-docker.sh -p apt -d "--publish 8000:5000" -t ./verify.sh
 
-.PHONY: test clean
+.PHONY: minimize test

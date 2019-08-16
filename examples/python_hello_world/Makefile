@@ -1,10 +1,6 @@
-export PACKAGE_MANAGER=apk
-include ../../minimizer.makefile
-
 test:
-	$(MAKE) minimize docker-image
-	$(MAKE) docker-run | grep 'hello world'
+	../../bin/strace-docker.sh -p apk
+	../../bin/minimize.sh
+	cat .docker-image | xargs docker run --rm | grep -cq 'hello world'
 
-clean: minimizer-clean
-
-.PHONY: test clean
+.PHONY: test
