@@ -22,23 +22,28 @@ mkdir -p "$TMP/in"
 tar --force-local -xf "$INPUT" -C "$TMP/in"
 
 extract() {
+    TYPE=$1
+    TARGET=$2
     if [ "$TYPE" = "f" ]; then
-        if [ -f "$TMP/in/$TARGET" ]; then
+        if [ -h "$TMP/in/$TARGET" ]; then
+            LINK=$TARGET
+            TARGET=$(readlink "$TMP/in/$TARGET")
+            mkdir -p "$TMP/out/$(dirname "$LINK")"
+            cp -d "$TMP/in/$LINK" "$TMP/out/$LINK" 1>&2
+            if grep -cq '^/' <<< "$TARGET"; then
+                echo >&2 "symlink (abs): $LINK -> $TARGET"
+                extract f "$TARGET"
+            else
+                echo >&2 "symlink (rel): $LINK -> $TARGET"
+                extract f "$(dirname "$LINK")/$TARGET"
+            fi
+        elif [ -f "$TMP/in/$TARGET" ]; then
             echo >&2 "including file: $TARGET $(du -h "$TMP/in/$TARGET" | cut -f1)"
             mkdir -p "$TMP/out/$(dirname "$TARGET")"
             cp -p "$TMP/in/$TARGET" "$TMP/out/$TARGET"
         elif [ -d "$TMP/in/$TARGET" ]; then
             echo >&2 "making directory: $TARGET"
             mkdir -p "$TMP/out/$TARGET"
-        elif [ -h "$TMP/in/$TARGET" ]; then
-            LINK=$TARGET
-            TARGET=$(readlink "$TMP/in/$TARGET")
-            echo >&2 "symlink: $LINK -> $TARGET"
-
-            mkdir -p "$TMP/out/$(dirname "$TARGET")"
-            mkdir -p "$TMP/out/$(dirname "$LINK")"
-            cp "$TMP/in/$TARGET" "$TMP/out/$TARGET" 1>&2
-            cp -d "$TMP/in/$LINK" "$TMP/out/$LINK" 1>&2
         elif [ ! -e "$TMP/in/$TARGET" ]; then
             echo >&2 "skipping file: $TARGET"
         else
@@ -54,5 +59,5 @@ extract() {
     fi
 }
 
-cat "$FILTER" | while IPS=\t read TYPE TARGET; do extract; done
+cat "$FILTER" | while IPS=\t read TYPE TARGET; do extract "$TYPE" "$TARGET"; done
 tar -cf "$OUTPUT" -C "$TMP/out" .
