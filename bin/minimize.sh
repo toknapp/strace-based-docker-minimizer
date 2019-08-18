@@ -8,11 +8,12 @@ DOCKER_FILE=${DOCKER_FILE-Dockerfile}
 DOCKER_CONTEXT=${DOCKER_CONTEXT-.}
 FILTER=${FILTER-.dockerinclude}
 OUTPUT=${OUTPUT-.docker-image}
-while getopts "f:c:v:" OPT; do
+while getopts "f:c:v:o:" OPT; do
     case $OPT in
         f) DOCKER_FILE=$OPTARG ;;
         c) DOCKER_CONTEXT=$OPTARG ;;
         v) FILTER=$OPTARG ;;
+        o) OUTPUT=$OPTARG ;;
         \?) echo "Invalid option: -$OPTARG" >&2; exit 2 ;;
     esac
 done
