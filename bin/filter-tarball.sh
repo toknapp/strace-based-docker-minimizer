@@ -19,7 +19,7 @@ TMP=$(mktemp -d)
 trap "rm -rf $TMP" EXIT
 
 mkdir -p "$TMP/in"
-tar --force-local -xf "$INPUT" -C "$TMP/in"
+tar -xf "$INPUT" -C "$TMP/in"
 
 extract() {
     TYPE=$1
