@@ -38,6 +38,7 @@ changes() {
 }
 
 "$SCRIPTS_DIR/export-image.sh" "$FROM" \
-    | "$SCRIPTS_DIR/filter-tarball.sh" -v "$FILTER" \
-    | xargs -0 --arg-file=<(changes | sed 's/^/--change=/' | tr '\n' '\0') \
-        $DOCKER import - > "$OUTPUT"
+    | "$SCRIPTS_DIR/filter-tarball.sh" -v "$FILTER" > "$TMP/content.tar.gz"
+
+changes | sed 's/^/--change=/' | tr '\n' '\0' \
+    | xargs -0 $DOCKER import "$TMP/content.tar.gz" > "$OUTPUT"
