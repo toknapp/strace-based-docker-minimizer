@@ -29,7 +29,7 @@ extract() {
             LINK=$TARGET
             TARGET=$(readlink "$TMP/in/$TARGET")
             mkdir -p "$TMP/out/$(dirname "$LINK")"
-            cp -d "$TMP/in/$LINK" "$TMP/out/$LINK" 1>&2
+            cp -a "$TMP/in/$LINK" "$TMP/out/$LINK" 1>&2
             if grep -cq '^/' <<< "$TARGET"; then
                 echo >&2 "symlink (abs): $LINK -> $TARGET"
                 extract f "$TARGET"
