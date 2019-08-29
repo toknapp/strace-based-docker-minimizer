@@ -28,7 +28,7 @@ while getopts "f:c:d:i:p:t:rRo:-" OPT; do
 done
 shift $((OPTIND-1))
 
-TMP=$(mktemp -d)
+TMP=$(realpath $(mktemp -d tmp.XXXXXXXXXXX))
 trap "rm -rf $TMP" EXIT
 
 $DOCKER build --iidfile="$TMP/base.image" -f "$DOCKER_FILE" \
