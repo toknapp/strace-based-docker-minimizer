@@ -66,13 +66,19 @@ INTERPRETER=$($DOCKER run --rm \
 )
 
 # prepare to run strace
-STRACE='["strace", "-qq", "-z", "-D", "-o", "'"$TRACE_DIR_IN_CONTAINER"'/trace", "-ff", "-f", "-e", "file", "'$INTERPRETER'", "'$EXEC'"]'
+cat <<EOF > "$TMP/strace-wrapper.sh"
+#!/bin/sh
+OUTPUT=$TRACE_DIR_IN_CONTAINER/trace.\$(tr -dc A-Za-z0-9 < /dev/urandom | head -c5)
+exec strace -qq -z -D -o "\$OUTPUT" -ff -f -e file "$INTERPRETER" "\$@"
+EOF
+chmod +x "$TMP/strace-wrapper.sh"
 
 ENTRYPOINT=$($DOCKER inspect "$INPUT" \
-    | jq --compact-output "[$STRACE, .[0].Config.Entrypoint[1:]] | flatten"
+    | jq --compact-output "[[\"/bin/strace-wrapper.sh\"], .[0].Config.Entrypoint] | flatten"
 )
 
 cat <<EOF >> $TMP/Dockerfile
+ADD strace-wrapper.sh /bin/strace-wrapper.sh
 ENTRYPOINT $ENTRYPOINT
 EOF
 
