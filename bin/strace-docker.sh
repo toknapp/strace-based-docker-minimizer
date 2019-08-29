@@ -10,6 +10,7 @@ TRACE_DIR_IN_CONTAINER=${TRACE_DIR_IN_CONTAINER-/tmp/traces}
 DOCKER_FILE=${DOCKER_FILE-Dockerfile}
 DOCKER_CONTEXT=${DOCKER_CONTEXT-.}
 OUTPUT=${OUTPUT-.dockerinclude}
+INSTALL_STRACE_CMD=
 while getopts "f:c:d:i:p:t:rRo:-" OPT; do
     case $OPT in
         f) DOCKER_FILE=$OPTARG ;;
@@ -34,7 +35,7 @@ $DOCKER build --iidfile="$TMP/base.image" -f "$DOCKER_FILE" \
     "$DOCKER_CONTEXT" >&2
 INPUT=$(cat "$TMP/base.image")
 
-if [[ ! -v INSTALL_STRACE_CMD ]]; then
+if [ -z "$INSTALL_STRACE_CMD" ]; then
     case ${PACKAGE_MANAGER-} in
         apk) INSTALL_STRACE_CMD="apk add --update strace binutils" ;;
         apt|apt-get) INSTALL_STRACE_CMD="apt-get update && apt-get install -y strace binutils";;
