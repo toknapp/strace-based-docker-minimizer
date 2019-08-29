@@ -62,7 +62,7 @@ INTERPRETER=$($DOCKER run --rm \
     $(<"$TMP/extended.image") \
     --program-headers "$EXEC" \
     | grep -o '\[Requesting program interpreter:\s\+[^]]\+\]' \
-    | sed 's/\[Requesting program interpreter:\s\+\([^]]\+\)]/\1/'
+    | sed 's/\[Requesting program interpreter:[[:space:]]*\(.*\)]/\1/'
 )
 
 # prepare to run strace
