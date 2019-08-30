@@ -2,7 +2,11 @@
 
 set -o nounset -o pipefail -o errexit
 
-SCRIPTS_DIR=$(realpath "$0" | xargs dirname)
+if command -v realpath 1>&- 2>&-; then
+    SCRIPTS_DIR=$(realpath "$0" | xargs dirname)
+else
+    SCRIPTS_DIR=$(readlink -f "$0" | xargs dirname)
+fi
 DOCKER=${DOCKER-docker}
 DOCKER_FILE=${DOCKER_FILE-Dockerfile}
 DOCKER_CONTEXT=${DOCKER_CONTEXT-.}
