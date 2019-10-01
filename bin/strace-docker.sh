@@ -31,7 +31,7 @@ shift $((OPTIND-1))
 TMP=$(realpath $(mktemp -d tmp.XXXXXXXXXXX))
 trap "rm -rf $TMP" EXIT
 
-$DOCKER build --iidfile="$TMP/base.image" -f "$DOCKER_FILE" \
+$DOCKER build --no-cache --iidfile="$TMP/base.image" -f "$DOCKER_FILE" \
     "$DOCKER_CONTEXT" >&2
 INPUT=$(cat "$TMP/base.image")
 
