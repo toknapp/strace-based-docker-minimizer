@@ -3,6 +3,13 @@
 # Make Bash's error handling strict(er).
 set -o nounset -o pipefail -o errexit
 
+# Be compatible with both Linux and macOS
+if command -v realpath 1>&- 2>&-; then
+    CANONICALIZE_FILENAME="realpath"
+else
+    CANONICALIZE_FILENAME="readlink -f"
+fi
+
 # Declare default settings.
 DOCKER=${DOCKER-docker}
 DOCKER_RUN_OPTS=${DOCKER_RUN_OPTS-}
@@ -37,7 +44,7 @@ shift $((OPTIND-1))
 # Make temporary dir, contains:
 # - Docker context for strace-enabled "Docker-image-under-test"
 # - Host dir of mounted volume with strace output
-TMP=$(realpath $(mktemp -d tmp.XXXXXXXXXXX))
+TMP=$($CANONICALIZE_FILENAME $(mktemp -d tmp.XXXXXXXXXXX))
 
 # Set up removal of temp dir, even in error cases.
 trap "rm -rf $TMP" EXIT

@@ -3,12 +3,15 @@
 # Make Bash's error handling strict(er).
 set -o nounset -o pipefail -o errexit
 
-# Get directory where this script is in to get at other scripts in there.
+# Be compatible with both Linux and macOS
 if command -v realpath 1>&- 2>&-; then
-    SCRIPTS_DIR=$(realpath "$0" | xargs dirname)
+    CANONICALIZE_FILENAME="realpath"
 else
-    SCRIPTS_DIR=$(readlink -f "$0" | xargs dirname)
+    CANONICALIZE_FILENAME="readlink -f"
 fi
+
+# Get directory where this script is in to get at other scripts in there.
+SCRIPTS_DIR=$($CANONICALIZE_FILENAME "$0" | xargs dirname)
 
 # Declare default settings.
 DOCKER=${DOCKER-docker}
@@ -31,7 +34,7 @@ shift $((OPTIND-1))
 
 # Make temporary dir, contains:
 # - Host dir of mounted volume with in&output of "filter runner"
-TMP=$(realpath $(mktemp -d tmp.XXXXXXXXXXX))
+TMP=$($CANONICALIZE_FILENAME $(mktemp -d tmp.XXXXXXXXXXX))
 
 # Set up removal of temp dir, even in error cases.
 trap "rm -rf $TMP" EXIT
