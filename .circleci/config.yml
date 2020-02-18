@@ -6,7 +6,7 @@ jobs:
       docker_layer_caching: true
     steps:
       - run:
-          command: sudo apt-get update && apt-get install -y coreutils
+          command: sudo apt-get update && sudo apt-get install -y coreutils
           name: Install dependencies
       - checkout
       - run:
