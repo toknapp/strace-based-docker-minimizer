@@ -3,11 +3,23 @@
 # Make Bash's error handling strict(er).
 set -o nounset -o pipefail -o errexit
 
-# Be compatible with both Linux and macOS
+# Be compatible with both Linux and macOS.
 if command -v realpath 1>&- 2>&-; then
     CANONICALIZE_FILENAME="realpath"
 else
     CANONICALIZE_FILENAME="readlink -f"
+fi
+
+# Be compatible with both Linux and macOS.
+# Repeatable sorting helps with `git diff`, which is important for human review
+# of the changes introduced.
+if command -v gsort 1>&- 2>&-; then
+    # To arrive at the smallest change set, I had to add
+    # `--dictionary-order --ignore-case`. Not sure why.
+    PLATFORM_INDEPENDENT_SORT="gsort --unique --dictionary-order --ignore-case"
+else
+    # I found this in the original non-macOS code. Might not be enough (see above).
+    PLATFORM_INDEPENDENT_SORT="sort -u"
 fi
 
 # Declare default settings.
@@ -221,6 +233,6 @@ cat "$TRACE_OUTPUT/trace".* \
     grep -cq "__pycache__" <<< "$FN" && continue
 
     echo "f	$FN"
-done | sort -u > "$OUTPUT"
+done | $PLATFORM_INDEPENDENT_SORT > "$OUTPUT"
 
 exit $EXIT
