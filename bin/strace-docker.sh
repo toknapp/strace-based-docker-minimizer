@@ -10,6 +10,9 @@ else
     CANONICALIZE_FILENAME="readlink -f"
 fi
 
+# Get directory where this script is in to get at other scripts in there.
+SCRIPTS_DIR=$($CANONICALIZE_FILENAME "$0" | xargs dirname)
+
 # Be compatible with both Linux and macOS.
 # Repeatable sorting helps with `git diff`, which is important for human review
 # of the changes introduced.
@@ -205,34 +208,6 @@ else
 fi
 
 # Convert the strace output into a .dockerinclude file.
-cat "$TRACE_OUTPUT/trace".* \
-    | grep -v "^--- SIG.*---$" \
-    | grep -v "<unfinished ...>" \
-    | while read -r L; do
-
-    SYSCALL=$(sed -E 's/^([0-9a-zA-Z_]+).*$/\1/' <<< "$L")
-    ARGS=$(sed -E 's/^[0-9a-zA-Z_]+\((.*)$/\1/' <<< "$L")
-
-    grep -cq "stat$" <<< "$SYSCALL" && grep -cq "S_IFDIR" <<< "$ARGS" && continue
-
-    case "$SYSCALL" in
-        execve|open|access|readlink|stat|lstat) # first argument
-            FN=$(sed -E 's/^"([^"]*)".*$/\1/' <<< "$ARGS") ;;
-        openat) # second argument
-            FN=$(sed -E 's/^[^,]+,[[:space:]]*"([^"]+)".*$/\1/' <<< "$ARGS") ;;
-        getcwd|mkdir|statfs|chown|unlink|rename|chdir) # ignore
-            continue;;
-        *) echo 1>&2 "unhandled syscall $SYSCALL"; exit 2;;
-    esac
-
-    grep -cq '^/dev' <<< "$FN" && continue
-    grep -cq '^/sys' <<< "$FN" && continue
-    grep -cq '^/proc' <<< "$FN" && continue
-    grep -cq '^/tmp' <<< "$FN" && continue
-
-    grep -cq "__pycache__" <<< "$FN" && continue
-
-    echo "f	$FN"
-done | $PLATFORM_INDEPENDENT_SORT > "$OUTPUT"
+cat "$TRACE_OUTPUT/trace".* | $SCRIPTS_DIR/strace2dockerinclude.py | $PLATFORM_INDEPENDENT_SORT > "$OUTPUT"
 
 exit $EXIT
