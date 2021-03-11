@@ -5,7 +5,7 @@ import fileinput
 import re
 
 
-reject_line_re = re.compile("^(--- SIG.*---|\+\+\+ killed by SIGKILL \+\+\+)$|<unfinished \.\.\.>")
+reject_line_re = re.compile("^(--- SIG.*---|\+\+\+ killed by SIG(KILL|PIPE) \+\+\+)$|<unfinished \.\.\.>")
 split_re = re.compile("^(?P<syscall>[0-9a-zA-Z_]+)\((?P<args>.*)$")
 stat_re = re.compile("stat$")
 filename_1st_arg_re = re.compile('^"(?P<filename>[^"]*)"')
@@ -17,7 +17,11 @@ def process(line):
     if reject_line_re.search(line) is not None:
         return None
 
-    syscall, args = split_re.search(line).group("syscall", "args")
+    line_parts = split_re.search(line)
+    if line_parts:
+        syscall, args = line_parts.group("syscall", "args")
+    else:
+        raise ValueError(f"unable to parse syscall from the following line:\n{line}")
 
     if stat_re.search(syscall) is not None and "S_IFDIR" in args:
         return None
